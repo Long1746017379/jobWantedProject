@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<beans xmlns="http://www.springframework.org/schema/beans" 
+	   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+	   xmlns:p="http://www.springframework.org/schema/p" 
+	   xmlns:mvc="http://www.springframework.org/schema/mvc" 
+	   xmlns:context="http://www.springframework.org/schema/context" 
+	   xmlns:tx="http://www.springframework.org/schema/tx" 
+	   xsi:schemaLocation="  
+    http://www.springframework.org/schema/beans   
+    http://www.springframework.org/schema/beans/spring-beans-3.0.xsd  
+    http://www.springframework.org/schema/context  
+    http://www.springframework.org/schema/context/spring-context-3.0.xsd  
+    http://www.springframework.org/schema/mvc  
+    http://www.springframework.org/schema/mvc/spring-mvc-3.0.xsd 
+    http://www.springframework.org/schema/tx 
+    http://www.springframework.org/schema/tx/spring-tx-3.0.xsd">
+
+	<!-- 引入jdbc.properties属性配置文件 -->
+	<context:property-placeholder location="classpath:jdbc.properties"/>
+    
+	<!-- 1.配置数据源 Spring整合c3p0 -->
+	
+	<!-- <bean id="dataSource" class="org.springframework.jdbc.datasource.DriverManagerDataSource">
+		<property name="driverClassName" value="com.mysql.jdbc.Driver" />
+		<property name="url" value="jdbc:mysql://localhost:3306/testmybatis?useUnicode=true&amp;characterEncoding=utf8&amp;allowMultiQueries=true" />
+		<property name="username" value="root" />
+		<property name="password" value="abcdef" />
+	</bean>	 -->
+		
+	<bean id="dataSource" class="com.mchange.v2.c3p0.ComboPooledDataSource">
+		<property name="driverClass" value="${jdbc.driverClassName}" />
+        <property name="jdbcUrl" value="${jdbc.url}" />
+        <property name="user" value="${jdbc.username}" />
+        <property name="password" value="${jdbc.password}" />
+        
+        <property name="autoCommitOnClose" value="true"/>
+        <property name="initialPoolSize" value="${cpool.initialPoolSize}"/>
+        <property name="minPoolSize" value="${cpool.minPoolSize}"/>
+        <property name="maxPoolSize" value="${cpool.maxPoolSize}"/>
+        <property name="maxIdleTime" value="${cpool.maxIdleTime}"/>
+        <property name="acquireIncrement" value="${cpool.acquireIncrement}"/>
+        <property name="idleConnectionTestPeriod" value="${cpool.idleConnectionTestPeriod}"/>
+        <property name="acquireRetryAttempts" value="${cpool.acquireRetryAttempts}"/>
+        <property name="maxStatements" value="${c3p0.maxStatements}"/>
+        <property name="maxStatementsPerConnection" value="${c3p0.maxStatementsPerConnection}"/>
+        
+    </bean>
+	 
+	<!--2.Spring框架整合Mybatis:
+                      1)加载数据源
+                      2)将实体类的映射资源文件即是**Mapper.xml加载过来 或者是绑定接口
+	 -->
+		                  
+	<bean id="sqlSessionFactory" class="org.mybatis.spring.SqlSessionFactoryBean">
+		<property name="dataSource" ref="dataSource"></property>
+		<property name="configLocation" value="classpath:config/mybatis-config.xml" /> 
+	</bean>
+		
+		
+<!--
+		3.通过mybatis整合Spring的包中的MapperScannerConfigure实现扫描某一路径下的绑定的接口
+                          和生成代理类
+		   PS :basePackage:指定sql映射文件(xxxMapper.xml)/绑定的接口所在的包（自动扫描）
+		       sqlSessionFactory：为绑定的接口生成代理类的
+-->
+	<bean class="org.mybatis.spring.mapper.MapperScannerConfigurer">
+	    <!-- 自动的去下面路径扫包，目的是加在sql映射文件或者mybatis绑定的接口 -->
+		<property name="basePackage" value="com.rj.bd.*.dao"></property>
+		<!-- mybtais绑定的接口其实是由mybatis自己去依靠JDK动态代理实现生产代理类，但是当前mybatis是被Spring整合了，
+		             所以将整合之后的结果也就是sqlSessionFactory这个bean注入过来，并使用它来实现给绑定的接口生成代理类 
+		-->
+		<property name="sqlSessionFactoryBeanName" value="sqlSessionFactory"></property>
+	</bean>		
+		
+	
+	<!--
+		4. 事务管理 : DataSourceTransactionManager dataSource:引用上面定义的数据源
+	-->
+	<bean id="txManager" class="org.springframework.jdbc.datasource.DataSourceTransactionManager">
+		<property name="dataSource" ref="dataSource"></property>
+	</bean>
+
+	<!-- 5. 使用声明式事务
+		 transaction-manager：引用上面定义的事务管理器
+	 -->
+	<tx:annotation-driven transaction-manager="txManager" />	
+		
+</beans>
